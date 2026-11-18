@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Race condition lab | Safe to break</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700&family=Barlow+Condensed:wght@600;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script src="scripts.js" defer></script>
+</head>
+<body data-lab="race" data-mode="vuln">
+<div class="stripe"></div>
+<header class="top"><div>
+  <a class="brand" href="homepage.html">Safe to break</a>
+  <a class="l" href="homepage.html">Home</a>
+  <a class="l" href="race.html" aria-current="page">Race condition</a>
+  <a class="l" href="click.html">Clickjacking</a>
+  <a class="l" href="proto.html">Prototype pollution</a>
+</div></header>
+
+<main class="page" id="lab">
+
+  <!-- TITLE -->
+  <div class="labhead">
+    <span class="plate">Lab 01 / 03</span>
+    <span class="plate dark">Challenge</span>
+    <h1>Race condition</h1>
+  </div>
+
+  <!-- WHAT IT IS -->
+  <section class="block first">
+    <h2>What it is</h2>
+    <p class="meta">CWE-362 · OWASP category: verify on owasp.org</p>
+    <p class="lead">The shop checks if a coupon was already used, waits a moment to save it, and only then marks it as used. If two requests arrive at the same time, both pass the check, so a one-time coupon works twice.</p>
+  </section>
+
+  <!-- THE LINE: switch + the two versions of the code -->
+  <section class="block">
+    <h2>The line</h2>
+
+    <div class="seg">
+      <button class="v" id="btn-vuln" aria-pressed="true">Vulnerable<small>Danger</small></button>
+      <button class="f" id="btn-fixed" aria-pressed="false">Fixed<small>Safe</small></button>
+    </div>
+
+    <div class="code">
+      <div class="banner" id="banner">Danger: vulnerable version</div>
+
+      <!-- VULNERABLE CODE  -->
+      <pre id="code-vuln">
+        <div data-n="1">let used = false;</div>
+        <div data-n="2">let total = 100;</div>
+        <div data-n="3">&nbsp;</div>
+        <div data-n="4">async function applyCoupon(code) {</div>
+        <div data-n="5">  if (code !== "SAVE20") return "invalid";</div>
+        <div data-n="6">  if (used) return "already used";    // check</div>
+        <div data-n="7">  await db.save(code);                // slow step</div>
+        <div class="hl" data-n="8">  used = true;                        // marked too late <i>causes the bug</i></div>
+        <div data-n="9">  total = total - 20;</div>
+        <div data-n="10">  return "applied";</div>
+        <div data-n="11">}</div>
+      </pre>
+
+      <!-- FIXED CODE (hidden until the visitor presses "Fixed") -->
+      <pre id="code-fixed" hidden>
+        <div data-n="1">let used = false;</div>
+        <div data-n="2">let total = 100;</div>
+        <div data-n="3">const lock = new Mutex();</div>
+        <div data-n="4">&nbsp;</div>
+        <div data-n="5">async function applyCoupon(code) {</div>
+        <div class="hl" data-n="6">  return lock.run(async () =&gt; {       // one request at a time <i>the fix</i></div>
+        <div data-n="7">    if (code !== "SAVE20") return "invalid";</div>
+        <div data-n="8">    if (used) return "already used";</div>
+        <div data-n="9">    used = true;                      // mark it first</div>
+        <div data-n="10">    await db.save(code);</div>
+        <div data-n="11">    total = total - 20;</div>
+        <div data-n="12">    return "applied";</div>
+        <div data-n="13">  });</div>
+        <div data-n="14">}</div>
+      </pre>
+    </div>
+
+    <p class="cap" id="why-vuln">Highlighted line: the coupon is only marked as used after the slow step, so other requests that arrive in the meantime still see used = false.</p>
+    <p class="cap" id="why-fixed" hidden>Highlighted line: the lock makes the check and the update one step. The second request waits, then sees that the coupon is already used.</p>
+  </section>
+
+  <!--  TRY IT -->
+  <section class="block">
+    <h2>Try it</h2>
+    <p id="hint">Press a payload, or use the window yourself, and watch what happens on the right.</p>
+
+    <div class="try">
+
+      <div>
+        <div class="btns">
+          <button data-count="1">Apply coupon once</button>
+          <button data-count="2">2 requests at the same time</button>
+          <button data-count="5">5 requests at the same time</button>
+          <button id="reset">Reset window</button>
+        </div>
+        <div class="out" id="out">Waiting for a payload.</div>
+      </div>
+
+      <!-- the fake shop -->
+      <div class="win">
+        <div class="tb"><i></i><i></i><i></i><span>shop.example/cart</span></div>
+        <div class="body">
+          <div class="promo">20% off: use code SAVE20 at checkout</div>
+          <ul class="cart">
+            <li><span>Notebook</span><b>$30</b></li>
+            <li><span>Desk lamp</span><b>$45</b></li>
+            <li><span>Backpack</span><b>$25</b></li>
+          </ul>
+          <div class="coup">
+            <input type="text" id="coupon" placeholder="Add coupon" aria-label="Coupon code" spellcheck="false">
+            <button class="wbtn" id="apply">Apply</button>
+          </div>
+          <div class="disc" id="discounts"></div>
+          <div class="stats">
+            <div class="stat tot" id="total-box"><small>Total</small><b id="total">$100</b></div>
+          </div>
+          <button class="wbtn order" id="order">Place order</button>
+          <ul class="log" id="log"></ul>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!--  WHY IT MATTERS -->
+  <section class="block">
+    <h2>Why it matters</h2>
+    <p>Attackers send many requests at once to use a one-time coupon, gift card or discount code many times. A 2015 report on Starbucks gift cards is a known example (verify the source before presenting).</p>
+    <p class="meta">Sources: CWE-362 (add one more source, for example PortSwigger Web Security Academy)</p>
+  </section>
+
+  <div class="pager">
+    <a href="homepage.html">Back to home</a>
+    <a href="click.html">Next: Clickjacking</a>
+  </div>
+
+</main>
+
+<div class="stripe"></div>
+<p class="foot" style="margin-top:20px">Final project, 42 Amman. Simulation only. Nothing real is attacked, stored or sent.</p>
+
+</body>
+</html>

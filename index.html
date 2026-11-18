@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Safe to break: web security labs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700&family=Barlow+Condensed:wght@600;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="scripts.js" defer></script>
+</head>
+<body data-mode="vuln">
+<div class="stripe"></div>
+<header class="top"><div><a class="brand" href="homepage.html">Safe to break</a><a class="l" href="homepage.html" aria-current="page">Home</a><a class="l" href="race.html">Race condition</a><a class="l" href="click.html">Clickjacking</a><a class="l" href="proto.html">Prototype pollution</a></div></header>
+<main class="page">
+  <section class="hero">
+    <div>
+      <span class="plate">Web security sandbox</span>
+      <h1><mark>Break it.</mark> Then fix it.</h1>
+      <p class="lead">Three web bugs, simulated safely in your browser. Press a payload, watch the attack work, switch to the fixed code and press it again.</p>
+      <a class="btn" href="race.html">Start Lab 01</a>
+    </div>
+    <div>
+      <div class="code">
+        <div class="banner warn">Warning: one missing header</div>
+<pre><div data-n="1">app.get("/account", (req, res) => {</div><div class="add" data-n="2">  res.set("X-Frame-Options", "DENY");</div><div data-n="3">  res.send(accountPage);</div><div data-n="4">});</div></pre>
+      </div>
+      <p class="cap">Clickjacking fix in one line: refuse to be put in a frame.</p>
+    </div>
+  </section>
+
+  <h2>How every lab works</h2>
+  <ol class="steps">
+    <li>Read the vulnerable code</li>
+    <li>Press a payload</li>
+    <li>Switch to the fixed code</li>
+    <li>Press it again and see it blocked</li>
+  </ol>
+
+  <div class="prog"><h2>The three labs</h2><span class="meta" id="prog"></span></div>
+  <div class="list">
+    <a class="row" href="race.html" data-id="race"><span class="no">Lab 01</span><b>Race condition</b><span>Send two requests at once and get paid twice.</span><em class="lvl ch">Challenge</em><i class="st"></i></a>
+    <a class="row" href="click.html" data-id="click"><span class="no">Lab 02</span><b>Clickjacking</b><span>Click a harmless button and hit a hidden one underneath.</span><em class="lvl">Starter</em><i class="st"></i></a>
+    <a class="row" href="proto.html" data-id="proto"><span class="no">Lab 03</span><b>Prototype pollution</b><span>One JSON key quietly turns every object into an admin.</span><em class="lvl ch">Challenge</em><i class="st"></i></a>
+  </div>
+</main>
+<div class="stripe"></div><p class="foot" style="margin-top:20px">Final project, 42 Amman. Simulation only. Nothing real is attacked, stored or sent.</p>
+</body>
+</html>
