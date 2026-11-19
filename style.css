@@ -706,3 +706,112 @@ a:focus-visible,button:focus-visible{
 pre{
     white-space:normal
 }
+/*------------------------------CLICKJACKING WINDOW (paste at the end of your CSS)------------------------------*/
+/* This lab also uses the window styles from the race page (.try, .win, .tb, .body, .wbtn, .wbtn.danger),
+   so those must already be in your CSS. Only the NEW parts are here. */
+
+/*ELEMENTS WITH THE "hidden" ATTRIBUTE MUST REALLY DISAPPEAR (even if a class gives them display:grid)*/
+[hidden]{
+    display:none !important
+}
+
+/*THE STAGE: the area where the attacker page and the hidden bank page are stacked*/
+.stage{
+    position:relative;
+    height:190px;
+    border:2px dashed var(--mute);
+    margin:8px 0 12px
+}
+
+/*EVERY LAYER COVERS THE WHOLE STAGE, WITH ITS BUTTON IN THE MIDDLE*/
+.stage .layer{
+    position:absolute;
+    inset:0;
+    display:grid;
+    place-items:center
+}
+
+/*BOTH BUTTONS HAVE THE SAME SIZE, SO THE HIDDEN ONE SITS EXACTLY ON THE PRIZE BUTTON*/
+.stage .wbtn{
+    width:190px;
+    height:48px;
+    padding:0
+}
+
+/*THE HIDDEN LAYER: invisible at first (opacity 0). The slider changes the opacity*/
+.over{
+    opacity:0;
+    background:#fff
+}
+
+/*SMALL LABEL AT THE TOP OF THE HIDDEN LAYER*/
+.over .cap2{
+    position:absolute;
+    top:8px;
+    left:10px;
+    font:11px var(--mono);
+    color:#111
+}
+
+/*THE "REFUSED TO CONNECT" TEXT IS CENTERED*/
+.over .mid{
+    top:50%;
+    left:0;
+    right:0;
+    transform:translateY(-50%);
+    text-align:center
+}
+
+/*FIXED VERSION: the layer is empty, so clicks go through it to the prize button underneath*/
+#over-fixed{
+    pointer-events:none
+}
+
+/*THE SLIDER AND ITS LABEL*/
+.rng{
+    display:block;
+    font:700 .9rem var(--cond);
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    margin:6px 0 10px
+}
+
+.rng input[type=range]{
+    width:100%
+}
+
+/*THE BANK ACCOUNT STATUS TEXT UNDER THE STAGE*/
+.state{
+    font-weight:700
+}
+
+.state.deleted{
+    color:var(--bad)
+}
+
+/*------------------------------CLICKJACKING PAYLOADS (add under your clickjacking CSS)------------------------------*/
+
+/*PAYLOAD 2 (UI REDRESSING): the hidden button grows to cover the WHOLE stage*/
+.stage .over.full .wbtn{
+    width:100%;
+    height:100%
+}
+
+/*THE FAKE MOUSE CURSOR THAT CLICKS FOR THE VISITOR (invisible until a payload runs)*/
+.cursor{
+    position:absolute;
+    left:6%;
+    top:88%;
+    width:16px;
+    height:22px;
+    background:#111;
+    clip-path:polygon(0 0,0 100%,30% 78%,48% 100%,62% 92%,45% 70%,80% 70%);
+    opacity:0;
+    z-index:5;
+    pointer-events:none;
+    transition:left .8s ease,top .8s ease,opacity .2s
+}
+
+.cursor.show{
+    opacity:1
+}

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clickjacking lab | Safe to break</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700&family=Barlow+Condensed:wght@600;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script src="scripts.js" defer></script>
+</head>
+<body data-lab="click" data-mode="vuln">
+<div class="stripe"></div>
+<header class="top"><div>
+  <a class="brand" href="index.html">Safe to break</a>
+  <a class="l" href="index.html">Home</a>
+  <a class="l" href="race.html">Race condition</a>
+  <a class="l" href="click.html" aria-current="page">Clickjacking</a>
+  <a class="l" href="proto.html">Prototype pollution</a>
+</div></header>
+
+<main class="page" id="lab">
+
+  <!-- TITLE -->
+  <div class="labhead">
+    <span class="plate">Lab 02 / 03</span>
+    <span class="plate dark">Starter</span>
+    <h1>Clickjacking</h1>
+  </div>
+
+  <!-- 1. WHAT IT IS -->
+  <section class="block first">
+    <h2>What it is</h2>
+    <p class="meta">CWE-1021 · OWASP category: verify on owasp.org</p>
+    <p class="lead">An attacker loads the real site in an invisible frame on top of their own page. You think you click their button, but your click lands on a button of the real site.</p>
+  </section>
+
+  <!-- 2. THE LINE: switch + the two versions of the code -->
+  <section class="block">
+    <h2>The line</h2>
+
+    <div class="seg">
+      <button class="v" id="btn-vuln" aria-pressed="true">Vulnerable<small>Danger</small></button>
+      <button class="f" id="btn-fixed" aria-pressed="false">Fixed<small>Safe</small></button>
+    </div>
+
+    <div class="code">
+      <div class="banner" id="banner">Danger: vulnerable version</div>
+
+      <!-- VULNERABLE CODE -->
+      <pre id="code-vuln">
+        <div>// server (Express)</div>
+        <div>app.get("/account", (req, res) =&gt; {</div>
+        <div class="hl">  res.send(accountPage);       // no frame protection <i>causes the bug</i></div>
+        <div>});</div>
+        <div>&nbsp;</div>
+        <div>// attacker page</div>
+        <div>// &lt;iframe src="bank.example/account" style="opacity:0"&gt;</div>
+        <div>// &lt;button&gt;Win a prize!&lt;/button&gt;</div>
+      </pre>
+
+      <!-- FIXED CODE (hidden until the visitor presses "Fixed") -->
+      <pre id="code-fixed" hidden>
+        <div>// server (Express)</div>
+        <div>app.get("/account", (req, res) =&gt; {</div>
+        <div class="hl">  res.set("X-Frame-Options", "DENY");   // refuse frames <i>the fix</i></div>
+        <div>  res.send(accountPage);</div>
+        <div>});</div>
+        <div>&nbsp;</div>
+        <div>// attacker page</div>
+        <div>// &lt;iframe src="bank.example/account" style="opacity:0"&gt;</div>
+        <div>// &lt;button&gt;Win a prize!&lt;/button&gt;</div>
+      </pre>
+    </div>
+
+    <p class="cap" id="why-vuln">Highlighted line: the page can be shown inside any other site’s frame, because the server never says it can’t.</p>
+    <p class="cap" id="why-fixed" hidden>Highlighted line: this header tells the browser never to show the page in a frame. This demo simulates the browser’s reaction, because GitHub Pages cannot send real headers.</p>
+  </section>
+
+  <!-- 3. TRY IT: payload buttons + readout (left) and the attacker's website window (right) -->
+  <section class="block">
+    <h2>Try it</h2>
+    <p id="hint">Press a payload and watch the attack run on the right. You can also click the box yourself, and move the slider to see the hidden layer.</p>
+
+    <div class="try">
+
+      <div>
+        <div class="btns">
+          <button id="p-cookie">1. Fake cookie banner: click "Accept", delete the account</button>
+          <button id="p-download">2. Fake download button: transfer $500</button>
+          <button id="p-video">3. Fake video button: approve a payment</button>
+          <button id="reset">Reset window</button>
+        </div>
+        <div class="out" id="out">Waiting for a payload.</div>
+      </div>
+
+      <!-- the attacker's website, shown as a small browser window -->
+      <div class="win">
+        <div class="tb"><i></i><i></i><i></i><span>attacker.example/prize</span></div>
+        <div class="body">
+          <p class="meta">A page you think is harmless</p>
+
+          <!-- the stage: three layers stacked on top of each other -->
+          <div class="stage" id="stage">
+            <!-- the fake mouse cursor that "clicks" for the victim -->
+            <div class="cursor" id="cursor"></div>
+            <!-- bottom layer: what you SEE -->
+            <div class="layer">
+              <button class="wbtn" id="prize">Win a prize!</button>
+            </div>
+            <!-- top layer, vulnerable version: the real bank page, invisible, on top of the prize button -->
+            <div class="layer over" id="over-vuln">
+              <span class="cap2">bank.example/account (hidden frame)</span>
+              <button class="wbtn danger" id="delete">Delete my account</button>
+            </div>
+            <!-- top layer, fixed version: the browser refuses to show the bank page -->
+            <div class="layer over" id="over-fixed" hidden>
+              <span class="cap2 mid">bank.example refused to connect<br>X-Frame-Options: DENY</span>
+            </div>
+          </div>
+
+          <label class="rng">Hidden layer visibility
+            <input type="range" id="slider" min="0" max="100" value="0">
+          </label>
+          <p class="state" id="state">Your bank account: active</p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- 4. WHY IT MATTERS -->
+  <section class="block">
+    <h2>Why it matters</h2>
+    <p>Victims can be tricked into deleting accounts, sending money or liking pages. A known example is the 2009 Twitter “Don’t Click” worm (verify the source before presenting).</p>
+    <p class="meta">Sources: CWE-1021; OWASP Clickjacking Defense Cheat Sheet (verify)</p>
+  </section>
+
+  <div class="pager">
+    <a href="index.html">Back to home</a>
+    <a href="proto.html">Next: Prototype pollution</a>
+  </div>
+
+</main>
+
+<div class="stripe"></div>
+<p class="foot" style="margin-top:20px">Final project, 42 Amman. Simulation only. Nothing real is attacked, stored or sent.</p>
+
+</body>
+</html>
