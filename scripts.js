@@ -195,8 +195,7 @@
 })();
 
 /*-------------------------------CLICKJACKING LOGIC------------------------------------------------------------------------------------------------------*/
-/* Replace your whole clickjacking block with this one.
-   Each payload button builds a different trap, then a fake mouse clicks for the visitor. */
+
 (function(){
   if (document.body.dataset.lab !== "click") return;   // run only on the clickjacking page
 
