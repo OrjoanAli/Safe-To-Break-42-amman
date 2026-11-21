@@ -262,7 +262,7 @@
   // put the window back to the start
   function resetWindow(){
     runId = runId + 1;                       // cancels any payload that is still running
-    current = payloads.frame;
+    current = payloads.cookie;
     prize.textContent = "Win a prize!";
     del.textContent = "Delete my account";
     overVuln.classList.remove("full");
