@@ -31,8 +31,8 @@
   <!-- 1. WHAT IT IS -->
   <section class="block first">
     <h2>What it is</h2>
-    <p class="meta">CWE-1321 · OWASP A08:2021 Software and Data Integrity Failures</p>
-    <p class="lead">Almost every JavaScript object inherits from one shared object, Object.prototype. If user input can write into it, every object in the app suddenly has the attacker’s property. The page then believes a normal guest is an admin, and no user record was ever edited.</p>
+    <p class="meta"><a href="https://cwe.mitre.org/data/definitions/1321.html">CWE-1321</a> · OWASP A08:2021 Software and Data Integrity Failures</p>
+    <p class="lead">A JavaScript vulnerability that enables an attacker to add arbitrary properties to global object prototypes, which may then be inherited by user-defined objects. If the application subsequently handles an attacker-controlled property in an unsafe way, this can potentially be chained with other vulnerabilities. </p>
   </section>
 
   <!-- 2. THE LINE: switch + the two versions of the code -->
