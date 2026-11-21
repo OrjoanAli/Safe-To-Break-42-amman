@@ -31,8 +31,8 @@
   <!-- 1. WHAT IT IS -->
   <section class="block first">
     <h2>What it is</h2>
-    <p class="meta">CWE-1021 · OWASP category: verify on owasp.org</p>
-    <p class="lead">An attacker loads the real site in an invisible frame on top of their own page. You think you click their button, but your click lands on a button of the real site.</p>
+    <p class="meta"><a link= "https://cwe.mitre.org/data/definitions/1021.html">CWE-1021</a> </p>
+    <p class="lead"> “UI redress attack”, is when an attacker uses multiple transparent or opaque layers to trick a user into clicking on a button or link on another page when they were intending to click on the top level page. Thus, the attacker is “hijacking” clicks meant for their page and routing them to another page, most likely owned by another application, domain, or both.</p>
   </section>
 
   <!-- 2. THE LINE: switch + the two versions of the code -->
@@ -132,8 +132,8 @@
   <!-- 4. WHY IT MATTERS -->
   <section class="block">
     <h2>Why it matters</h2>
-    <p>Victims can be tricked into deleting accounts, sending money or liking pages. A known example is the 2009 Twitter “Don’t Click” worm (verify the source before presenting).</p>
-    <p class="meta">Sources: CWE-1021; OWASP Clickjacking Defense Cheat Sheet (verify)</p>
+    <p>Victims can be tricked into deleting accounts, sending money or liking pages.  Twitter clickjacking attack was a self-spreading social media worm in February 2009 that tricked users into unknowingly posting messages from their own accounts.Posts appeared on Twitter with a link and the text "Don't click," tempting curious users to click.The destination page used an invisible iframe placed over a button.</p>
+    <p class="meta">Sources: <a href="https://cwe.mitre.org/data/definitions/1021.html">CWE-1021</a>, <a href= "https://blog.x.com/en/company/clickjacking-blocked">Twitter(X)-blog</a></p>
   </section>
 
   <div class="pager">
