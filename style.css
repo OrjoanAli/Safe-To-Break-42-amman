@@ -815,3 +815,53 @@ pre{
 .cursor.show{
     opacity:1
 }
+
+/*------------------------------PROTOTYPE POLLUTION WINDOW (paste at the end of style.css)------------------------------*/
+/* This lab also uses the window styles from the other labs (.try, .win, .tb, .body, .state, [hidden]),
+   so those must already be in your CSS. Only the NEW parts are here. */
+
+/*THE TWO BOXES: ADMIN CONTROL PANEL AND VIP FEATURES*/
+.panels{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    margin:10px 0 14px
+}
+
+/*LOCKED BOX (grey)*/
+.panel{
+    border:3px solid #111;
+    background:var(--bg);
+    color:var(--mute);
+    padding:10px 12px
+}
+
+.panel b{
+    display:block;
+    font:800 1.1rem var(--cond);
+    text-transform:uppercase;
+    letter-spacing:.04em
+}
+
+.panel span{
+    font:600 .85rem var(--mono)
+}
+
+/*UNLOCKED BOX (red, because the visitor should not have access)*/
+.panel.open{
+    background:var(--bad);
+    color:#fff
+}
+
+/*SMALL CODE-LIKE LINES UNDER THE BOXES*/
+.mono{
+    font:12.5px/1.5 var(--mono);
+    margin:0 0 6px;
+    max-width:none;
+    overflow-wrap:anywhere
+}
+
+/*ON SMALL SCREENS: ONE BOX PER LINE*/
+@media(max-width:800px){
+    .panels{grid-template-columns:1fr}
+}

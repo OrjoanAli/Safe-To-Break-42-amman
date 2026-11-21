@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prototype pollution lab | Safe to break</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700&family=Barlow+Condensed:wght@600;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script src="scripts.js" defer></script>
+</head>
+<body data-lab="proto" data-mode="vuln">
+<div class="stripe"></div>
+<header class="top"><div>
+  <a class="brand" href="index.html">Safe to break</a>
+  <a class="l" href="index.html">Home</a>
+  <a class="l" href="race.html">Race condition</a>
+  <a class="l" href="click.html">Clickjacking</a>
+  <a class="l" href="proto.html" aria-current="page">Prototype pollution</a>
+</div></header>
+
+<main class="page" id="lab">
+
+  <!-- TITLE -->
+  <div class="labhead">
+    <span class="plate">Lab 03 / 03</span>
+    <span class="plate dark">Challenge</span>
+    <h1>Prototype pollution</h1>
+  </div>
+
+  <!-- 1. WHAT IT IS -->
+  <section class="block first">
+    <h2>What it is</h2>
+    <p class="meta">CWE-1321 · OWASP A08:2021 Software and Data Integrity Failures</p>
+    <p class="lead">Almost every JavaScript object inherits from one shared object, Object.prototype. If user input can write into it, every object in the app suddenly has the attacker’s property. The page then believes a normal guest is an admin, and no user record was ever edited.</p>
+  </section>
+
+  <!-- 2. THE LINE: switch + the two versions of the code -->
+  <section class="block">
+    <h2>The line</h2>
+
+    <div class="seg">
+      <button class="v" id="btn-vuln" aria-pressed="true">Vulnerable<small>Danger</small></button>
+      <button class="f" id="btn-fixed" aria-pressed="false">Fixed<small>Safe</small></button>
+    </div>
+
+    <div class="code">
+      <div class="banner" id="banner">Danger: vulnerable version</div>
+
+      <!-- VULNERABLE CODE -->
+      <pre id="code-vuln">
+        <div data-n="1">function parseQuery(query) {</div>
+        <div data-n="2">  const config = {};</div>
+        <div data-n="3">  for (let pair of query.slice(1).split("&amp;")) {</div>
+        <div data-n="4">    let [rawKey, val] = pair.split("=");</div>
+        <div data-n="5">    let cleanKey = rawKey.replace("__proto__", "");</div>
+        <div data-n="6">    let keys = cleanKey.replace(/\]/g, "").split("[");</div>
+        <div data-n="7">    let curr = config;</div>
+        <div data-n="8">    for (let i = 0; i &lt; keys.length - 1; i++) {</div>
+        <div data-n="9">      if (!curr[keys[i]]) curr[keys[i]] = {};</div>
+        <div data-n="10">      curr = curr[keys[i]];</div>
+        <div data-n="11">    }</div>
+        <div class="hl" data-n="12">    curr[keys[keys.length - 1]] = (val === "true"); <i>causes the bug</i></div>
+        <div data-n="13">  }</div>
+        <div data-n="14">  return config;</div>
+        <div data-n="15">}</div>
+      </pre>
+
+      <!-- FIXED CODE (hidden until the visitor presses "Fixed") -->
+      <pre id="code-fixed" hidden>
+        <div data-n="1">function parseQuerySafe(query) {</div>
+        <div data-n="2">  const config = Object.create(null);</div>
+        <div data-n="3">  const blocked = ["__proto__", "constructor", "prototype"];</div>
+        <div data-n="4">  for (let pair of query.slice(1).split("&amp;")) {</div>
+        <div data-n="5">    let [rawKey, val] = pair.split("=");</div>
+        <div data-n="6">    let keys = rawKey.replace(/\]/g, "").split("[");</div>
+        <div class="hl" data-n="7">    if (keys.some(k =&gt; blocked.includes(k))) continue; <i>the fix</i></div>
+        <div data-n="8">    let curr = config;</div>
+        <div data-n="9">    for (let i = 0; i &lt; keys.length - 1; i++) {</div>
+        <div data-n="10">      if (!curr[keys[i]]) curr[keys[i]] = Object.create(null);</div>
+        <div data-n="11">      curr = curr[keys[i]];</div>
+        <div data-n="12">    }</div>
+        <div data-n="13">    curr[keys[keys.length - 1]] = (val === "true");</div>
+        <div data-n="14">  }</div>
+        <div data-n="15">  return config;</div>
+        <div data-n="16">}</div>
+      </pre>
+    </div>
+
+    <p class="cap" id="why-vuln">Highlighted line 12: the parser writes into whatever object <b>curr</b> points to. A key path like constructor, prototype, or a __proto__ that the filter rebuilds by accident, makes <b>curr</b> point to Object.prototype, so the write lands on every object in the app.</p>
+    <p class="cap" id="why-fixed" hidden>Highlighted line 7: any key named __proto__, constructor or prototype is skipped before anything is written. Object.create(null) also makes objects that have no prototype chain to pollute.</p>
+  </section>
+
+  <!-- 3. TRY IT: payload buttons + readout (left) and the victim's page window (right) -->
+  <section class="block">
+    <h2>Try it</h2>
+    <p id="hint">Press a payload and watch the page on the right. The address bar shows the link the attacker sends to the victim.</p>
+
+    <div class="try">
+
+      <div>
+        <div class="btns">
+          <button id="p-normal">Normal use: ?darkMode=true</button>
+          <button id="p-constructor">1. Constructor chain: ?constructor[prototype][isAdmin]=true</button>
+          <button id="p-bypass">2. Flawed filter bypass: ?__pro__proto__to__[vipAccess]=true</button>
+          <button id="reset">Reset window</button>
+        </div>
+        <div class="out" id="out">Waiting for a payload.</div>
+      </div>
+
+      <!-- the victim's website, shown as a small browser window -->
+      <div class="win">
+        <div class="tb"><i></i><i></i><i></i><span id="urlbar">shop.example/account</span></div>
+        <div class="body">
+          <p class="meta" id="who">Logged in as: guest (a normal user)</p>
+
+          <div class="panels">
+            <div class="panel" id="admin">
+              <b>Admin control panel</b>
+              <span id="admin-state">Locked</span>
+            </div>
+            <div class="panel" id="vip">
+              <b>VIP features</b>
+              <span id="vip-state">Locked</span>
+            </div>
+          </div>
+
+          <p class="mono" id="cfg">Parsed config: {}</p>
+          <p class="mono" id="chk">({}).isAdmin = undefined   ({}).vipAccess = undefined</p>
+          <p class="state" id="state">Object.prototype polluted: no</p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- 4. WHY IT MATTERS -->
+  <section class="block">
+    <h2>Why it matters</h2>
+    <p>Polluting Object.prototype lets an attacker raise their own privileges, skip client-side security checks, or reach dangerous code such as DOM XSS when a polluted value flows into it. In 2019 a prototype pollution bug in the Lodash library (CVE-2019-10744, in the defaultsDeep function) affected millions of web applications.</p>
+    <p class="meta">Sources:
+      <a href="https://portswigger.net/web-security/prototype-pollution/client-side">PortSwigger Web Security Academy</a> ·
+      <a href="https://cwe.mitre.org/data/definitions/1321.html">MITRE CWE-1321</a> ·
+      <a href="https://owasp.org/Top10/A08_2021-Software_and_Data_Integrity_Failures/">OWASP A08:2021</a> ·
+      <a href="https://nvd.nist.gov/vuln/detail/CVE-2019-10744">NVD CVE-2019-10744</a>
+    </p>
+  </section>
+
+  <div class="pager">
+    <a href="index.html">Back to home</a>
+    <a href="click.html">Previous: Clickjacking</a>
+  </div>
+
+</main>
+
+<div class="stripe"></div>
+<p class="foot" style="margin-top:20px">Final project, 42 Amman. Simulation only. Nothing real is attacked, stored or sent.</p>
+
+</body>
+</html>

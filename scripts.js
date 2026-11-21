@@ -21,7 +21,6 @@
   var btnVuln    = document.getElementById("btn-vuln");
   var btnFixed   = document.getElementById("btn-fixed");
 
-  /* ----------  SMALL HELPERS ---------- */
 
   // sleep is a fake slow step, and the race happens because the coupon is marked as used only after the millisecond that he will wait
   function sleep(ms){
@@ -107,7 +106,7 @@
 
     if (mode === "fixed") { //check what mood you are in 
       addLog("Request " + id + ": waits for its turn (lock)"); 
-    
+    //In fixed mode, the requests wait in a line, so each one starts only after the one before it has finished
       var myTurn = lock.then(function(){ return checkCoupon(id, code); }); //
       lock = myTurn.catch(function(){});//
       return myTurn;
@@ -164,7 +163,7 @@
   btnVuln.onclick  = function(){ setMode("vuln"); };
   btnFixed.onclick = function(){ setMode("fixed"); };
 
-  var payloadButtons = document.querySelectorAll("[data-count]");
+  var payloadButtons = document.querySelectorAll("[data-count]"); //finds every button that has a data-count these are the payload buttons
 
   function pressPayload(button){
     var count = Number(button.dataset.count);   // read the number written in the HTML, like 3
@@ -172,7 +171,7 @@
     sendRequests(count, "SAVE20");              // send that many requests
   }
 
-  for (let i = 0; i < payloadButtons.length; i++) {
+  for (let i = 0; i < payloadButtons.length; i++) { //goes through them one by one and gives each one a click action
     let button = payloadButtons[i];
     button.onclick = function(){ pressPayload(button); };
   }
@@ -195,8 +194,7 @@
 })();
 
 /*-------------------------------CLICKJACKING LOGIC------------------------------------------------------------------------------------------------------*/
-/* Replace your whole clickjacking block with this one.
-   Each payload button builds a different trap, then a fake mouse clicks for the visitor. */
+
 (function(){
   if (document.body.dataset.lab !== "click") return;   // run only on the clickjacking page
 
@@ -205,9 +203,9 @@
   var runId = 0;          // lets us cancel a running payload when the visitor resets or switches mode
 
   // the 3 payloads. Each one is a different trap.
-  var payloads = {
-    cookie: {
-      bait:   "Accept cookies",
+  var payloads = {          // a variable that holds an object
+    cookie: {               // a property of payloads (its value is an object)
+      bait: "Accept cookies", // a property of cookie (its value is text)
       action: "Delete my account",
       full:   false,
       click:  { left: "50%", top: "50%" },
@@ -352,4 +350,161 @@
   document.getElementById("p-download").onclick = function(){ runPayload("download"); };
   document.getElementById("p-video").onclick   = function(){ runPayload("video"); };
   document.getElementById("reset").onclick     = resetWindow;
+})();
+
+/*-------------------------------PROTOTYPE POLLUTION LOGIC------------------------------------------------------------------------------------------------------*/
+(function(){
+  if (document.body.dataset.lab !== "proto") return;   // run only on the prototype pollution page
+
+  /* ---------- 1. THE MEMORY ---------- */
+  var mode = "vuln";                     // "vuln" = vulnerable code, "fixed" = fixed code
+  var BASE_URL = "shop.example/account"; // the address shown in the fake browser window
+
+  /* ---------- 2. GET THE PARTS OF THE PAGE (they have an id in proto.html) ---------- */
+  var out        = document.getElementById("out");          // the Readout box
+  var urlBar     = document.getElementById("urlbar");       // the address bar of the fake window
+  var adminBox   = document.getElementById("admin");        // the Admin control panel box
+  var adminState = document.getElementById("admin-state");  // "Locked" / "UNLOCKED"
+  var vipBox     = document.getElementById("vip");          // the VIP features box
+  var vipState   = document.getElementById("vip-state");
+  var cfg        = document.getElementById("cfg");          // shows the parsed config
+  var chk        = document.getElementById("chk");          // shows what a brand new {} inherits
+  var state      = document.getElementById("state");        // "Object.prototype polluted: no"
+  var btnVuln    = document.getElementById("btn-vuln");
+  var btnFixed   = document.getElementById("btn-fixed");
+
+  /* ---------- 3. THE TWO PARSERS (the same code that is shown on the page) ---------- */
+
+  // VULNERABLE: turns ?a[b][c]=true into nested objects, with no check on the keys
+  function parseQuery(query) {
+    const config = {};
+    for (let pair of query.slice(1).split("&")) {
+      let [rawKey, val] = pair.split("=");
+      let cleanKey = rawKey.replace("__proto__", "");          // only removes it ONE time
+      let keys = cleanKey.replace(/\]/g, "").split("[");
+      let curr = config;
+      for (let i = 0; i < keys.length - 1; i++) {
+        if (!curr[keys[i]]) curr[keys[i]] = {};
+        curr = curr[keys[i]];
+      }
+      curr[keys[keys.length - 1]] = (val === "true");          // VULNERABLE LINE
+    }
+    return config;
+  }
+
+  // FIXED: blocks dangerous keys and uses objects that have no prototype
+  function parseQuerySafe(query) {
+    const config = Object.create(null);
+    const blocked = ["__proto__", "constructor", "prototype"];
+    for (let pair of query.slice(1).split("&")) {
+      let [rawKey, val] = pair.split("=");
+      let keys = rawKey.replace(/\]/g, "").split("[");
+      if (keys.some(k => blocked.includes(k))) continue;       // FIX LINE
+      let curr = config;
+      for (let i = 0; i < keys.length - 1; i++) {
+        if (!curr[keys[i]]) curr[keys[i]] = Object.create(null);
+        curr = curr[keys[i]];
+      }
+      curr[keys[keys.length - 1]] = (val === "true");
+    }
+    return config;
+  }
+
+  /* ---------- 4. SMALL HELPERS ---------- */
+
+  // write the result in the Readout box. type is "bad" (red) or "good" (green)
+  function showResult(type, title, message){
+    out.className = "out " + type;
+    out.innerHTML = "<b>" + title + "</b>" + message;
+  }
+
+  // remove the properties the payloads add to Object.prototype (cleans the demo)
+  function cleanPrototype(){
+    delete Object.prototype.isAdmin;
+    delete Object.prototype.vipAccess;
+  }
+
+  // draw the victim's page from what the objects really contain right now. Returns true if polluted
+  function renderPage(config){
+    var user  = { name: "guest" };   // a normal user: isAdmin and vipAccess were never set on it
+    var empty = {};                  // a brand new empty object
+    var isAdmin  = user.isAdmin === true;
+    var isVip    = user.vipAccess === true;
+    var polluted = empty.isAdmin === true || empty.vipAccess === true;
+
+    adminBox.className = "panel" + (isAdmin ? " open" : "");
+    adminState.textContent = isAdmin ? "UNLOCKED" : "Locked";
+    vipBox.className = "panel" + (isVip ? " open" : "");
+    vipState.textContent = isVip ? "UNLOCKED" : "Locked";
+
+    cfg.textContent = "Parsed config: " + JSON.stringify(config);
+    chk.textContent = "({}).isAdmin = " + empty.isAdmin + "   ({}).vipAccess = " + empty.vipAccess;
+    state.textContent = "Object.prototype polluted: " + (polluted ? "YES" : "no");
+    state.className = polluted ? "state deleted" : "state";
+    return polluted;
+  }
+
+  // put the window back to the start
+  function resetWindow(){
+    cleanPrototype();
+    urlBar.textContent = BASE_URL;
+    renderPage({});
+    out.className = "out";
+    out.textContent = "Waiting for a payload.";
+  }
+
+  /* ---------- 5. RUN A PAYLOAD: the link is opened, the page parses it ---------- */
+  function runPayload(query, kind){
+    resetWindow();                                   // start clean
+    urlBar.textContent = BASE_URL + query;           // show the link the victim opened
+
+    var config = (mode === "vuln") ? parseQuery(query) : parseQuerySafe(query);
+    var polluted = renderPage(config);
+
+    if (kind === "normal") {
+      showResult("good", "Normal use",
+        "The page read ?darkMode=true into its config. Nothing unusual happened.");
+    } else if (polluted && kind === "constructor") {
+      showResult("bad", "Exploited: Object.prototype was polluted",
+        "The key path constructor, prototype, isAdmin reached Object.prototype and wrote isAdmin = true there. Every object now inherits it, so the guest user opened the Admin control panel without being given admin rights.");
+    } else if (polluted && kind === "bypass") {
+      showResult("bad", "Exploited: the filter was bypassed",
+        "The filter removed __proto__ only once, so the leftover pieces joined into a new __proto__. The code then wrote vipAccess = true on Object.prototype, and the guest user got the VIP features.");
+    } else if (kind === "constructor") {
+      showResult("good", "Blocked: Object.prototype is untouched",
+        "The key “constructor” is on the block list, so the whole line was skipped. The guest user stays locked out.");
+    } else {
+      showResult("good", "Blocked: Object.prototype is untouched",
+        "The fixed code does not strip anything. The key stays a harmless name on an object that has no prototype, so nothing is polluted and the guest stays locked out.");
+    }
+  }
+
+  /* ---------- 6. THE VULNERABLE / FIXED SWITCH ---------- */
+  function setMode(newMode){
+    mode = newMode;
+    var isVuln = (newMode === "vuln");
+
+    document.body.dataset.mode = newMode;                       // changes the colors (CSS)
+    document.getElementById("code-vuln").hidden  = !isVuln;     // show / hide the code
+    document.getElementById("code-fixed").hidden = isVuln;
+    document.getElementById("why-vuln").hidden   = !isVuln;
+    document.getElementById("why-fixed").hidden  = isVuln;
+    document.getElementById("banner").textContent = isVuln ? "Danger: vulnerable version" : "Safe: fixed version";
+    document.getElementById("hint").textContent = isVuln
+      ? "Press a payload and watch the page on the right. The address bar shows the link the attacker sends to the victim."
+      : "Same payloads, fixed code. Press the attack again and compare.";
+    btnVuln.setAttribute("aria-pressed", isVuln);
+    btnFixed.setAttribute("aria-pressed", !isVuln);
+
+    resetWindow();                                              // also cleans Object.prototype
+  }
+
+  /* ---------- 7. CONNECT THE BUTTONS ---------- */
+  btnVuln.onclick  = function(){ setMode("vuln"); };
+  btnFixed.onclick = function(){ setMode("fixed"); };
+
+  document.getElementById("p-normal").onclick      = function(){ runPayload("?darkMode=true", "normal"); };
+  document.getElementById("p-constructor").onclick = function(){ runPayload("?constructor[prototype][isAdmin]=true", "constructor"); };
+  document.getElementById("p-bypass").onclick      = function(){ runPayload("?__pro__proto__to__[vipAccess]=true", "bypass"); };
+  document.getElementById("reset").onclick         = resetWindow;
 })();
