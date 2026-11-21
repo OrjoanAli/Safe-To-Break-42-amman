@@ -3,7 +3,7 @@
 > **Break it. Then fix it.**
 > A hands-on learning website where you can *see* three important web vulnerabilities happen, then switch to the fixed code and watch the same attack fail.
 
-**Live site:** `https://<your-username>.github.io/<your-repo>/` *(replace with your deployed URL)*
+**Live site:** `https://orjoanali.github.io/Safe-To-Break-42-amman/` *(replace with your deployed URL)*
 
 ---
 
