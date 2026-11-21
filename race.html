@@ -32,7 +32,7 @@
   <section class="block first">
     <h2>What it is</h2>
     <p class="meta">CWE-362 · OWASP category: verify on owasp.org</p>
-    <p class="lead">The shop checks if a coupon was already used, waits a moment to save it, and only then marks it as used. If two requests arrive at the same time, both pass the check, so a one-time coupon works twice.</p>
+    <p class="lead">A race condition is a server-side bug: the server checks a value and updates it in two separate steps, so simultaneous requests can all pass the check before any of them changes the value.A common subtype is TOCTOU (Time-of-Check to Time-of-Use), where concurrent actions collide on the same data and leave the system in an inconsistent state.It appears in several OWASP Top 10 2025 categories depending on context.</p>
   </section>
 
   <!-- THE LINE: switch + the two versions of the code -->
@@ -131,8 +131,8 @@
   <!--  WHY IT MATTERS -->
   <section class="block">
     <h2>Why it matters</h2>
-    <p>Attackers send many requests at once to use a one-time coupon, gift card or discount code many times. A 2015 report on Starbucks gift cards is a known example (verify the source before presenting).</p>
-    <p class="meta">Sources: CWE-362 (add one more source, for example PortSwigger Web Security Academy)</p>
+    <p>Attackers use race conditions to spend one balance, coupon, or vote many times. In 2015, researcher Egor Homakov showed that sending two gift-card transfers at the same moment made Starbucks credit the money twice, creating balance out of nothing.</p>
+    <p class="meta">Sources: <a href="https://community.owasp.org/pages/vulnerabilities/race_conditions">CWE-362</a> ,<a href="https://www.bbc.com/news/technology-32844123">Starbucks attack</a></p>
   </section>
 
   <div class="pager">
